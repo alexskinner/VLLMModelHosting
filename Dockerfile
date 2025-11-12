@@ -1,6 +1,6 @@
 FROM vllm/vllm-openai:latest
 
-# Install curl for health checks and public IP detection
+# Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Create cache directory
@@ -16,5 +16,5 @@ EXPOSE 8000
 # Set working directory
 WORKDIR /root
 
-# Run the startup script
-CMD ["/start.sh"]
+# Use our startup script as the entrypoint
+ENTRYPOINT ["/bin/bash", "/start.sh"]
