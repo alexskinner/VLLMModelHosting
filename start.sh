@@ -28,7 +28,7 @@ echo ""
 echo "Model: $MODEL"
 echo "Served as: $SERVED_NAME"
 echo "Context window: 64K tokens"
-echo "Max concurrent sequences: 256"
+echo "Max concurrent sequences: 64"
 echo "CUDAGraph: ENABLED"
 echo ""
 echo "Starting optimised vLLM server..."
@@ -40,7 +40,7 @@ exec python3 -m vllm.entrypoints.openai.api_server \
   --port 8000 \
   --served-model-name "$SERVED_NAME" \
   --max-model-len 65536 \
-  --max-num-seqs 256 \
+  --max-num-seqs 64 \
   --gpu-memory-utilization 0.95 \
   --kv-cache-dtype auto \
   --enable-prefix-caching \
