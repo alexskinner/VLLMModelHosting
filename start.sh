@@ -7,6 +7,14 @@ echo "==================================================="
 # Set defaults
 MODEL="${MODEL:-Qwen/Qwen3-4B-Instruct-2507}"
 SERVED_NAME="${SERVED_NAME:-$(basename $MODEL | tr '[:upper:]' '[:lower:]' | sed 's/-instruct.*//')}"
+HOST="${HOST:-0.0.0.0}"
+PORT="${PORT:-8000}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-65536}"
+MAX_NUM_SEQS="${MAX_NUM_SEQS:-64}"
+GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.95}"
+KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-auto}"
+ENABLE_PREFIX_CACHING="${ENABLE_PREFIX_CACHING:-true}"
+ENABLE_CHUNKED_PREFILL="${ENABLE_CHUNKED_PREFILL:-true}"
 
 # Generate API key if not provided
 if [ -z "$VLLM_API_KEY" ]; then
@@ -27,22 +35,36 @@ fi
 echo ""
 echo "Model: $MODEL"
 echo "Served as: $SERVED_NAME"
-echo "Context window: 64K tokens"
-echo "Max concurrent sequences: 64"
-echo "CUDAGraph: ENABLED"
+echo "Context window: $(($MAX_MODEL_LEN / 1024))K tokens"
+echo "Max concurrent sequences: $MAX_NUM_SEQS"
+echo "GPU Memory Utilization: $GPU_MEMORY_UTILIZATION"
+echo "Prefix Caching: $ENABLE_PREFIX_CACHING"
+echo "Chunked Prefill: $ENABLE_CHUNKED_PREFILL"
+echo "KV Cache Dtype: $KV_CACHE_DTYPE"
 echo ""
 echo "Starting optimised vLLM server..."
 
+# Build vLLM command with conditional flags
+VLLM_CMD="python3 -m vllm.entrypoints.openai.api_server \
+  --model $MODEL \
+  --host $HOST \
+  --port $PORT \
+  --served-model-name $SERVED_NAME \
+  --max-model-len $MAX_MODEL_LEN \
+  --max-num-seqs $MAX_NUM_SEQS \
+  --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
+  --kv-cache-dtype $KV_CACHE_DTYPE"
+
+# Add optional flags
+if [ "$ENABLE_PREFIX_CACHING" = "true" ]; then
+    VLLM_CMD="$VLLM_CMD --enable-prefix-caching"
+fi
+
+if [ "$ENABLE_CHUNKED_PREFILL" = "true" ]; then
+    VLLM_CMD="$VLLM_CMD --enable-chunked-prefill"
+fi
+
+VLLM_CMD="$VLLM_CMD --api-key $VLLM_API_KEY"
+
 # Start vLLM with all optimisations
-exec python3 -m vllm.entrypoints.openai.api_server \
-  --model "$MODEL" \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --served-model-name "$SERVED_NAME" \
-  --max-model-len 65536 \
-  --max-num-seqs 64 \
-  --gpu-memory-utilization 0.95 \
-  --kv-cache-dtype auto \
-  --enable-prefix-caching \
-  --enable-chunked-prefill \
-  --api-key "$VLLM_API_KEY"
+exec $VLLM_CMD
